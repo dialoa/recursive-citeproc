@@ -101,13 +101,13 @@ qgenerate: $(FILTER_FILE) test/input.md _quarto.yml _quarto-generate.yaml
 website: _site/index.html _site/$(FILTER_FILE)
 
 _site/index.html: README.md test/input.md $(FILTER_FILE) .tools/docs.lua \
-		_site/output.md _site/style.css
+		_site/output.m=html _site/style.css
 	@mkdir -p _site
 	$(PANDOC) \
 	    --standalone \
 	    --lua-filter=.tools/docs.lua \
 	    --metadata=sample-file:test/input.md \
-	    --metadata=result-file:_site/output.md \
+	    --metadata=result-file:_site/output.html \
 	    --metadata=code-file:$(FILTER_FILE) \
 	    --css=style.css \
 	    --toc \
