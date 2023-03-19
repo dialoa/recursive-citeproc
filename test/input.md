@@ -7,7 +7,7 @@ nocite:
  @Smith2003, @Smith2005, 
 ---
 
-[@Doe2000]. CHange.
+[@Doe2000].
 
 # References
 
