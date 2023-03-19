@@ -3,8 +3,9 @@ FILTER_FILE := $(wildcard *.lua)
 # Name of the filter, *without* `.lua` file extension
 FILTER_NAME = $(patsubst %.lua,%,$(FILTER_FILE))
 
-# Allow to use a different pandoc binary, e.g. when testing.
+# Allow to use different pandoc and quarto binaries, e.g. when testing.
 PANDOC ?= pandoc
+QUARTO ?= quarto
 # Allow to adjust the diff command if necessary
 DIFF = diff
 # Use a POSIX sed with ERE ('v' is specific to GNU sed)
@@ -67,6 +68,29 @@ generate: $(FILTER_FILE) test/input.md test/test.yaml
 		$(PANDOC) --defaults test/test.yaml --to $$ext \
 		--output test/expected.$$ext ; \
 	done
+
+#
+# Quarto test
+#
+
+## Quarto version of test target
+.PHONY: qtest
+qtest: $(FILTER_FILE) test/input.md _quarto.yml _quarto-test.yaml
+	@for ext in $(FORMAT) ; do \
+		$(QUARTO) render --profile=test --to $$ext ; \
+		$(DIFF) test/qexpected.$$ext test/qtest.$$ext ; \
+		rm -f test/qtest.$$ext ; \
+	done
+
+## Regenerate Quarto expected outputs
+.PHONY: qgenerate
+qgenerate: $(FILTER_FILE) test/input.md _quarto.yml _quarto-generate.yaml
+	@cd test
+	@for ext in $(FORMAT) ; do \
+		$(QUARTO) render --profile=generate --to $$ext ; \
+	done
+	@cd ..
+
 
 #
 # Website
@@ -142,7 +166,7 @@ $(QUARTO_EXT_DIR)/$(FILTER_FILE): $(FILTER_FILE) $(QUARTO_EXT_DIR)
 
 ## Sets a new release (uses VERSION macro if defined)
 .PHONY: release
-release: quarto-extension regenerate
+release: quarto-extension generate qgenerate clean
 	git commit -am "Release $(FILTER_NAME) $(VERSION)"
 	git tag v$(VERSION) -m "$(FILTER_NAME) $(VERSION)"
 	@echo 'Do not forget to push the tag back to github with `git push --tags`'
@@ -180,4 +204,5 @@ setup: update-name
 ## Clean regenerables files
 .PHONY: clean
 clean:
+	rm -rf test/input_files
 	rm -f _site/output.md _site/index.html _site/style.css

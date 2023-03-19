@@ -1,8 +1,13 @@
 ---
-title: Lorem ipsum
-author: Nullus
+title: 'Self-citing bibliography example'
+author: Julien Dutant
+nocite: 
+- '@Smith2001'
+- |
+ @Smith2003, @Smith2005, 
 ---
 
-Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Donec
-hendrerit tempor tellus. Donec pretium posuere tellus. Proin quam
-nisl, tincidunt et, mattis eget, convallis nec, purus.
+[@Doe2000]. CHange.
+
+# References
+

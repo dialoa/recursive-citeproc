@@ -1,4 +1,9 @@
 input-files: ["test/input.md"]
 standalone: true
+bibliography: ${.}/references.bib
+csl: ${.}/chicago-author-date-with-note.csl
+metadata:
+  link-citations: true
 filters:
-  - {type: lua, path: greetings.lua}
+  - {type: lua, path: recursive-citeproc.lua}
+  - citeproc
