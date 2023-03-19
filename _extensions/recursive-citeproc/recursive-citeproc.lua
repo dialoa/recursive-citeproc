@@ -6,8 +6,8 @@ bibliographies in Pandoc and Quarto
 @license MIT - see LICENSE file for details.
 ]]
 
--- Once we've reimplemented references(doc) this
--- should work as far back as 2.11 (--citeproc, Lua filters)
+-- Once we've reimplemented references(doc) and citeproc(doc) 
+-- this should work as far back as 2.11 (--citeproc, Lua filters)
 --PANDOC_VERSION:must_be_at_least '2.11'
 -- for now we need
 PANDOC_VERSION:must_be_at_least '2.19'
@@ -15,7 +15,7 @@ PANDOC_VERSION:must_be_at_least '2.19'
 --- # Helper functions
 
 stringify = pandoc.utils.stringify
-block_to_inlines = pandoc.utils.block_to_inlines
+-- block_to_inlines = pandoc.utils.block_to_inlines
 citeproc = pandoc.utils.citeproc
 references = pandoc.utils.references
 

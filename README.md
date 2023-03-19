@@ -91,6 +91,10 @@ filters:
 - citeproc
 ```
 
+Copy the file in your Pandoc user data directory to make
+it available to Pandoc anywhere. Run `pandoc -v` to see
+where your Pandoc user data directory is.
+
 ### Quarto
 
 Users of Quarto can install this filter as an extension with
@@ -144,6 +148,11 @@ themselves only cited by references cited in the document.
 
 If the max depth is reached before all self-recursive citations are 
 processed, PDF output may generate an error.
+
+Testing
+------------------------------------------------------------------
+
+To try 
 
 How the filter works
 ------------------------------------------------------------------
