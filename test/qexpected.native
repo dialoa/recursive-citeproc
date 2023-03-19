@@ -1,0 +1,360 @@
+Pandoc
+  Meta
+    { unMeta =
+        fromList
+          [ ( "author"
+            , MetaList
+                [ MetaInlines [ Str "Julien" , Space , Str "Dutant" ] ]
+            )
+          , ( "authors"
+            , MetaList
+                [ MetaMap
+                    (fromList
+                       [ ( "id" , MetaString "1" )
+                       , ( "metadata" , MetaMap (fromList []) )
+                       , ( "name"
+                         , MetaMap
+                             (fromList
+                                [ ( "family"
+                                  , MetaInlines [ Str "Dutant" ]
+                                  )
+                                , ( "given"
+                                  , MetaInlines [ Str "Julien" ]
+                                  )
+                                , ( "literal"
+                                  , MetaInlines
+                                      [ Str "Julien"
+                                      , Space
+                                      , Str "Dutant"
+                                      ]
+                                  )
+                                ])
+                         )
+                       , ( "number" , MetaString "1" )
+                       ])
+                ]
+            )
+          , ( "biblio-config" , MetaBool True )
+          , ( "bibliography"
+            , MetaList [ MetaInlines [ Str "references.bib" ] ]
+            )
+          , ( "by-author"
+            , MetaList
+                [ MetaMap
+                    (fromList
+                       [ ( "id" , MetaString "1" )
+                       , ( "metadata" , MetaMap (fromList []) )
+                       , ( "name"
+                         , MetaMap
+                             (fromList
+                                [ ( "family"
+                                  , MetaInlines [ Str "Dutant" ]
+                                  )
+                                , ( "given"
+                                  , MetaInlines [ Str "Julien" ]
+                                  )
+                                , ( "literal"
+                                  , MetaInlines
+                                      [ Str "Julien"
+                                      , Space
+                                      , Str "Dutant"
+                                      ]
+                                  )
+                                ])
+                         )
+                       , ( "number" , MetaString "1" )
+                       ])
+                ]
+            )
+          , ( "csl"
+            , MetaInlines [ Str "chicago-author-date-with-note.csl" ]
+            )
+          , ( "labels"
+            , MetaMap
+                (fromList
+                   [ ( "abstract" , MetaInlines [ Str "Abstract" ] )
+                   , ( "affiliations"
+                     , MetaInlines [ Str "Affiliations" ]
+                     )
+                   , ( "authors" , MetaInlines [ Str "Author" ] )
+                   , ( "description"
+                     , MetaInlines [ Str "Description" ]
+                     )
+                   , ( "doi" , MetaInlines [ Str "Doi" ] )
+                   , ( "modified" , MetaInlines [ Str "Modified" ] )
+                   , ( "published" , MetaInlines [ Str "Published" ] )
+                   ])
+            )
+          , ( "nocite"
+            , MetaList
+                [ MetaInlines
+                    [ Cite
+                        [ Citation
+                            { citationId = "Smith2001"
+                            , citationPrefix = []
+                            , citationSuffix = []
+                            , citationMode = AuthorInText
+                            , citationNoteNum = 1
+                            , citationHash = 0
+                            }
+                        ]
+                        [ Str "@Smith2001" ]
+                    ]
+                , MetaBlocks
+                    [ Para
+                        [ Cite
+                            [ Citation
+                                { citationId = "Smith2003"
+                                , citationPrefix = []
+                                , citationSuffix = []
+                                , citationMode = AuthorInText
+                                , citationNoteNum = 2
+                                , citationHash = 0
+                                }
+                            ]
+                            [ Str "@Smith2003" ]
+                        , Str ","
+                        , Space
+                        , Cite
+                            [ Citation
+                                { citationId = "Smith2005"
+                                , citationPrefix = []
+                                , citationSuffix = []
+                                , citationMode = AuthorInText
+                                , citationNoteNum = 3
+                                , citationHash = 0
+                                }
+                            ]
+                            [ Str "@Smith2005" ]
+                        , Str ","
+                        ]
+                    ]
+                , MetaList
+                    [ MetaInlines
+                        [ Cite
+                            [ Citation
+                                { citationId = "Doe1990"
+                                , citationPrefix = []
+                                , citationSuffix = []
+                                , citationMode = AuthorInText
+                                , citationNoteNum = 0
+                                , citationHash = 0
+                                }
+                            ]
+                            [ Str "@Doe1990" ]
+                        ]
+                    ]
+                , MetaList
+                    [ MetaInlines
+                        [ Cite
+                            [ Citation
+                                { citationId = "Doe1980"
+                                , citationPrefix = []
+                                , citationSuffix = []
+                                , citationMode = AuthorInText
+                                , citationNoteNum = 0
+                                , citationHash = 0
+                                }
+                            ]
+                            [ Str "@Doe1980" ]
+                        ]
+                    ]
+                ]
+            )
+          , ( "output-dir" , MetaInlines [ Str "../test" ] )
+          , ( "suppress-bibliography" , MetaBool True )
+          , ( "title"
+            , MetaInlines
+                [ Str "Self-citing"
+                , Space
+                , Str "bibliography"
+                , Space
+                , Str "example"
+                ]
+            )
+          ]
+    }
+  [ Para
+      [ Cite
+          [ Citation
+              { citationId = "Doe2000"
+              , citationPrefix = []
+              , citationSuffix = []
+              , citationMode = NormalCitation
+              , citationNoteNum = 1
+              , citationHash = 0
+              }
+          ]
+          [ Str "(Doe" , Space , Str "2000)" ]
+      , Str "."
+      , Space
+      , Str "CHange."
+      ]
+  , Header
+      1
+      ( "references" , [ "unnumbered" ] , [] )
+      [ Str "References" ]
+  , Div
+      ( "refs"
+      , [ "references" , "csl-bib-body" , "hanging-indent" ]
+      , []
+      )
+      [ Div
+          ( "ref-Doe1980" , [ "csl-entry" ] , [] )
+          [ Para
+              [ Str "Doe,"
+              , Space
+              , Str "Jane"
+              , Space
+              , Str "E."
+              , Space
+              , Str "1980."
+              , Space
+              , Emph
+                  [ Str "A"
+                  , Space
+                  , Str "Long"
+                  , Space
+                  , Str "Journey"
+                  ]
+              , Str "."
+              ]
+          ]
+      , Div
+          ( "ref-Doe1990" , [ "csl-entry" ] , [] )
+          [ Para
+              [ Str "\8212\8212\8212."
+              , Space
+              , Str "1990."
+              , Space
+              , Emph
+                  [ Str "A"
+                  , Space
+                  , Str "Long"
+                  , Space
+                  , Str "Journey"
+                  ]
+              , Str "."
+              , Space
+              , Str "Reprint"
+              , Space
+              , Str "of\160"
+              , Cite
+                  [ Citation
+                      { citationId = "Doe1980"
+                      , citationPrefix = []
+                      , citationSuffix = []
+                      , citationMode = AuthorInText
+                      , citationNoteNum = 0
+                      , citationHash = 0
+                      }
+                  ]
+                  [ Str "Doe" , Space , Str "(1980)" ]
+              , Str "."
+              ]
+          ]
+      , Div
+          ( "ref-Doe2000" , [ "csl-entry" ] , [] )
+          [ Para
+              [ Str "\8212\8212\8212."
+              , Space
+              , Str "2000."
+              , Space
+              , Emph
+                  [ Str "A"
+                  , Space
+                  , Str "Long"
+                  , Space
+                  , Str "Journey"
+                  ]
+              , Str "."
+              , Space
+              , Str "Reprint"
+              , Space
+              , Str "of\160"
+              , Cite
+                  [ Citation
+                      { citationId = "Doe1990"
+                      , citationPrefix = []
+                      , citationSuffix = []
+                      , citationMode = AuthorInText
+                      , citationNoteNum = 0
+                      , citationHash = 0
+                      }
+                  ]
+                  [ Str "Doe" , Space , Str "(1990)" ]
+              , Str "."
+              ]
+          ]
+      , Div
+          ( "ref-Smith2001" , [ "csl-entry" ] , [] )
+          [ Para
+              [ Str "Smith,"
+              , Space
+              , Str "Al."
+              , Space
+              , Str "2001."
+              , Space
+              , Span
+                  ( "" , [] , [] )
+                  [ Str "\8220"
+                  , Str "Thoughts"
+                  , Str "."
+                  , Str "\8221"
+                  ]
+              , Space
+              , Emph [ Str "Varia" ]
+              , Space
+              , Str "1:"
+              , Space
+              , Str "1\8211\&15."
+              ]
+          ]
+      , Div
+          ( "ref-Smith2003" , [ "csl-entry" ] , [] )
+          [ Para
+              [ Str "\8212\8212\8212."
+              , Space
+              , Str "2003."
+              , Space
+              , Span
+                  ( "" , [] , [] )
+                  [ Str "\8220"
+                  , Str "More"
+                  , Space
+                  , Str "Thoughts"
+                  , Str "."
+                  , Str "\8221"
+                  ]
+              , Space
+              , Emph [ Str "Varia" ]
+              , Space
+              , Str "12:"
+              , Space
+              , Str "35\8211\&55."
+              ]
+          ]
+      , Div
+          ( "ref-Smith2005" , [ "csl-entry" ] , [] )
+          [ Para
+              [ Str "\8212\8212\8212."
+              , Space
+              , Str "2005."
+              , Space
+              , Span
+                  ( "" , [] , [] )
+                  [ Str "\8220"
+                  , Str "Afterthoughts"
+                  , Str "."
+                  , Str "\8221"
+                  ]
+              , Space
+              , Emph [ Str "Varia" ]
+              , Space
+              , Str "15:"
+              , Space
+              , Str "25\8211\&33."
+              ]
+          ]
+      ]
+  ]
