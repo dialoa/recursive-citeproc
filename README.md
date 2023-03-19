@@ -152,7 +152,30 @@ processed, PDF output may generate an error.
 Testing
 ------------------------------------------------------------------
 
-To try 
+To try the filter with Pandoc or Quarto, clone the directory.
+
+### Pandoc
+
+Generate Pandoc outputs with `make generate`. Change the output format
+with `make generate FORMAT=docx`. Use `FORMAT=latex` for latex
+outputs. You can list multiple formats, `make generate FORMAT="docx pdf"`.
+The outputs will be in the `test` folder, named `expected.<format>`. 
+
+Requires [Pandoc][]. 
+
+### Quarto
+
+As above, replacing `generate` with `qgenerate`. 
+
+Requires [Quarto][].
+
+### Pandoc within Quarto
+
+With [Quarto][] installed, you can also use the Pandoc engine
+embedded in Quarto: add the argument `PANDOC="quarto pandoc"` to the
+Pandoc commands above, e.g. `make generate FORMAT=docx
+PANDOC="quarto pandoc"`.
+
 
 How the filter works
 ------------------------------------------------------------------
