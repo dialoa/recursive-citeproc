@@ -101,7 +101,7 @@ qgenerate: $(FILTER_FILE) test/input.md _quarto.yml _quarto-generate.yaml
 website: _site/index.html _site/$(FILTER_FILE)
 
 _site/index.html: README.md test/input.md $(FILTER_FILE) .tools/docs.lua \
-		_site/output.m=html _site/style.css
+		_site/output.html _site/style.css
 	@mkdir -p _site
 	$(PANDOC) \
 	    --standalone \
@@ -119,11 +119,11 @@ _site/style.css:
 	    --output $@ \
 	    'https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/light.css'
 
-_site/output.md: $(FILTER_FILE) test/input.md test/test.yaml
+_site/output.html: $(FILTER_FILE) test/input.md test/test.yaml
 	@mkdir -p _site
 	$(PANDOC) \
 	    --defaults=test/test.yaml \
-	    --to=markdown \
+	    --to=html \
 	    --output=$@
 
 _site/$(FILTER_FILE): $(FILTER_FILE)
