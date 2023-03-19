@@ -5,8 +5,8 @@ Recursive-citeproc
 
 Self-citing BibTeX bibliographies in [Pandoc][] and [Quarto][].
 
-[CI badge]: https://img.shields.io/github/actions/workflow/status/dialoa/recursive-citeproc.git/ci.yaml?branch=main
-[CI workflow]: https://github.com/dialoa/recursive-citeproc.git/actions/workflows/ci.yaml
+[CI badge]: https://img.shields.io/github/actions/workflow/status/dialoa/recursive-citeproc/ci.yaml?branch=main
+[CI workflow]: https://github.com/dialoa/recursive-citeproc/actions/workflows/ci.yaml
 
 [BibTeX]: https://ctan.math.illinois.edu/biblio/bibtex/base/btxdoc.pdf
 [Citeproc]: https://github.com/jgm/citeproc
