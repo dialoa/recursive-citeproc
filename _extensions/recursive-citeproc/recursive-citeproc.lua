@@ -6,8 +6,11 @@ bibliographies in Pandoc and Quarto
 @license MIT - see LICENSE file for details.
 ]]
 
--- Should work as far back as 2.11 (--citeproc, Lua filters)
-PANDOC_VERSION:must_be_at_least '2.11'
+-- Once we've reimplemented references(doc) this
+-- should work as far back as 2.11 (--citeproc, Lua filters)
+--PANDOC_VERSION:must_be_at_least '2.11'
+-- for now we need
+PANDOC_VERSION:must_be_at_least '2.19'
 
 --- # Helper functions
 
