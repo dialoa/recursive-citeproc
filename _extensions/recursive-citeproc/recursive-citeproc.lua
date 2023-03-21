@@ -7,43 +7,58 @@ bibliographies in Pandoc and Quarto
 ]]
 
 -- Once we've reimplemented references(doc) and citeproc(doc) 
--- this should work as far back as 2.11 (--citeproc, Lua filters)
---PANDOC_VERSION:must_be_at_least '2.11'
+-- 2.17 for relying on `elem:walk()`, `pandoc.Inlines`, pandoc.utils.type
 -- for now we need
-PANDOC_VERSION:must_be_at_least '2.19'
+PANDOC_VERSION:must_be_at_least '2.17'
+
+--- # Global Setting
+DEFAULT_MAX_DEPTH = 20
 
 --- # Helper functions
 
 stringify = pandoc.utils.stringify
--- block_to_inlines = pandoc.utils.block_to_inlines
+type = pandoc.utils.type
+blocks_to_inlines = pandoc.utils.blocks_to_inlines
 citeproc = pandoc.utils.citeproc
-references = pandoc.utils.references
-
----@alias metaObject
----| boolean
----| string
----| pandoc.MetaMap
----| pandoc.MetaInlines
----| pandoc.MetaBlocks
----| pandoc.List
-
----@alias typeName 'boolean'|'string'|'table'|'Inlines'|'Blocks'|'List'|'nil'
-
---- get the type of meta object (h/t Albert Krewinkel)
----@type fun(obj: metaObject): typeName
-local metatype = pandoc.utils.type or
-  function (obj)
-    local metatag = type(obj) == 'table' and obj.t and obj.t:gsub('^Meta', '')
-    return metatag and metatag ~= 'Map' and metatag or type(obj)
-  end
+-- we don't use pandoc.utils.references, >50% slower on benchmark
+-- references = pandoc.utils.references
 
 --- ensure meta element is a (possibly empty) pandoc.List
 ---@param obj metaObject
 ---@return pandoc.List obj
 function ensureList(obj)
   return obj ~=nil and (
-      metatype(obj) == 'List' and obj or pandoc.List(obj)
+      type(obj) == 'List' and obj or pandoc.List(obj)
     ) or pandoc.List:new()
+end
+
+--- listConcat: concatenate a List of lists
+---@param list pandoc.List[] list of pandoc.Lists
+---@return pandoc.List result concatenated List
+function listConcat(list)
+  local result = pandoc.List:new()
+  for _,sublist in ipairs(list) do
+    result:extend(sublist)
+  end
+  return result
+end
+
+---Flatten a meta value into Inlines
+---in pandoc < 2.17 we only return a pandoc.List of Inline elements
+---@param elem pandoc.Inlines|string|number|pandoc.Blocks|pandoc.List
+---@return pandoc.Inlines result possibly empty Inlines
+function flattenToInlines(elem)
+  local elemType = type(elem)
+  return elemType == 'Inlines' and elem
+    or elemType == 'string' 
+      and pandoc.Inlines(pandoc.Str(elem))
+    or elemType == 'number' 
+      and pandoc.Inlines(pandoc.Str(tonumber(elem)))
+    or elemType == 'Blocks' and blocks_to_inlines(elem)
+    or elemType == 'List' and listConcat(
+      elem:map(flattenToInlines)
+    )
+    or pandoc.Inlines({})
 end
 
 --- # Options object
@@ -88,58 +103,125 @@ function Options:read(meta)
   -- allowDepth(depth) must return true when depth = 1
   local userMaXDepth = opts and tonumber(opts['max-dept']) 
   local maxDepth = userMaXDepth and userMaXDepth >= 0 and userMaXDepth
-    or 100
+    or DEFAULT_MAX_DEPTH
   self.allowDepth = function (depth)
     return maxDepth == 0 or maxDepth >= depth
   end
 
 end
 
+--- # Functions to handle lists of strings
+--- could be an object that extends pandoc.List
+
+---@alias CitationIds pandoc.List pandoc.List of strings
+
+---create
+---@param list CitationIds|nil
+---@return CitationIds cids
+function cids_create(list)
+  local cids = pandoc.List:new()
+  if list and type(list) == 'table' or type(list) == 'List' then
+    for _,item in ipairs(list) do
+      if type(item) == 'string' then cids:insert(item) end
+    end
+  end
+  return cids
+end
+
+---add Id if not already included
+---@param cids CitationIds
+---@param id string citation Id
+---@return CitationIds
+function cids_addId(cids, id)
+  if not cids:find(id) then cids:insert(id) end
+  return cids
+end
+
+---add citation Ids from Cite elements in blocks
+---@param cids CitationIds
+---@param blocks pandoc.Blocks|pandoc.Block walkable element
+---@return CitationIds
+function cids_addFromBlocks(cids, blocks)
+  blocks:walk({
+    Cite = function(cite)
+      for _,citation in ipairs(cite.citations) do
+        cids_addId(cids, citation.id)
+        end
+      end
+  })
+  return cids
+end
+
+---add citation Ids from Cite elements in doc's meta
+--- (fields `nocite`, `abstract`, `thanks`)
+---@param cids CitationIds
+---@param doc any
+---@return CitationIds
+function cids_addFromMeta(cids, doc)
+  for _,key in ipairs {'nocite', 'abstract', 'thanks' } do
+    if doc.meta[key] then
+      cids_addFromBlocks(cids, 
+        pandoc.Plain(flattenToInlines(doc.meta[key]))
+      )
+    end
+  end
+  return cids
+end
+
+---add citation Ids from pandoc.utils.references(doc)
+function cids_addFromReferences(cids, doc)
+  for _,item in ipairs(references(doc)) do
+    cids_addId(cids, item.id)
+  end
+end
+
 --- # Filter
 
-
----listRefs: returns doc's references as a list of ids
+---listRefIds: returns doc's references as a list of ids
+--- we do not use pandoc.utils.references: >50% slower 
+--- than collecting ref ID strings manually on benchmark.
 ---@param doc pandoc.Pandoc
 ---@return string[] refsList list of ids
-function listRefs(doc)
-  local refs = references(doc)
-  local refsList = pandoc.List:new()
-  for _,item in ipairs(refs) do
-    if item.id then refsList:insert(item.id) end
-  end
-  return refsList
+function listRefIds(doc)
+  local cids = cids_create()
+  -- if references then
+    -- cids_addFromReferences(cids, doc)
+  -- else
+    cids_addFromBlocks(cids, doc.blocks)
+    cids_addFromMeta(cids, doc)
+  -- end
+  return cids
 end
 
 ---listNewRefs: list references in newDoc not present in oldDoc
 ---@param oldDoc pandoc.Pandoc
 ---@param newDoc pandoc.Pandoc
----@return string[] result list of ids
-function listNewRefs(newDoc, oldDoc)
-  local oldRefs, newRefs = listRefs(oldDoc), listRefs(newDoc)
-  local result = pandoc.List:new()
+---@return CitationIds cids list of ids
+function listNewRefIds(newDoc, oldDoc)
+  local oldRefs, newRefs = listRefIds(oldDoc), listRefIds(newDoc)
+  local cids = cids_create()
   for _,ref in ipairs(newRefs) do
-    if not oldRefs:find(ref) then result:insert(ref) end
+    if not oldRefs:find(ref) then cids_addId(cids, ref) end
   end
-  return result
+  return cids
 end
 
 ---addToNocite: add ref ids list to doc's nocite metadata
----@param newRefs string[]
 ---@param doc pandoc.Pandoc
+---@param newRefs string[]
 ---@return pandoc.Pandoc
-function addToNocite(newRefs, doc)
-  local nocite = ensureList(doc.meta.nocite)
-  local cites = pandoc.List:new()
+function addToNocite(doc, newRefs)
+  local inlines = flattenToInlines(doc.meta.nocite)
   for _,ref in ipairs(newRefs) do
-    cites:insert(pandoc.Cite(
+    inlines:insert(pandoc.Space())
+    inlines:insert(pandoc.Cite(
       pandoc.Str('@'..ref),
       {
         pandoc.Citation(ref, 'AuthorInText')
       }
     ))
   end
-  nocite:insert(cites)
-  doc.meta.nocite = nocite
+  doc.meta.nocite = pandoc.MetaInlines(inlines)
   return doc
 end
 
@@ -156,9 +238,9 @@ function recursiveCiteproc(doc)
   while options.allowDepth(depth) do
     depth = depth + 1
     newDoc = citeproc(doc)
-    local newRefs = listNewRefs(newDoc, doc)
+    local newRefs = listNewRefIds(newDoc, doc)
     if #newRefs > 0 then
-      addToNocite(newRefs, doc)
+      doc = addToNocite(doc, newRefs)
     else
       break
     end

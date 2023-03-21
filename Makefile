@@ -1,5 +1,5 @@
 # Name of the filter file, *with* `.lua` file extension.
-FILTER_FILE := $(wildcard *.lua)
+FILTER_FILE := recursive-citeproc.lua
 # Name of the filter, *without* `.lua` file extension
 FILTER_NAME = $(patsubst %.lua,%,$(FILTER_FILE))
 
@@ -68,6 +68,18 @@ generate: $(FILTER_FILE) test/input.md test/test.yaml
 		$(PANDOC) --defaults test/test.yaml --to $$ext \
 		--output test/expected.$$ext ; \
 	done
+
+# Benchmark
+# used to compare pandoc.utils.references with pure lua
+.PHONY: benchmark
+benchmark: $(FILTER_FILE) test/input.md test/test.yaml
+	@mv test/references.bib test/references.back.bib
+	@$(PANDOC) lua .tools/benchmark.lua > test/references.bib
+	@for ext in $(FORMAT) ; do \
+		$(PANDOC) --defaults test/test.yaml --to $$ext \
+		--output test/expected.$$ext --verbose ; \
+	done
+	@mv test/references.back.bib test/references.bib
 
 #
 # Quarto test
