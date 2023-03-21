@@ -16,6 +16,9 @@ ifeq "$(FORMAT)" ""
 FORMAT = html
 endif
 
+# Benchmarking depth
+DEPTH ?= 100
+
 # Directory containing the Quarto extension
 QUARTO_EXT_DIR = _extensions/$(FILTER_NAME)
 # The extension's name. Used in the Quarto extension metadata
@@ -70,16 +73,16 @@ generate: $(FILTER_FILE) test/input.md test/test.yaml
 	done
 
 # Benchmark
-# used to compare pandoc.utils.references with pure lua
+# used to compare pandoc.utils.references with manual collection
 .PHONY: benchmark
 benchmark: $(FILTER_FILE) test/input.md test/test.yaml
-	@mv test/references.bib test/references.back.bib
-	@$(PANDOC) lua .tools/benchmark.lua > test/references.bib
+	@mv -f test/references.bib test/references.back.bib
+	@$(PANDOC) lua .tools/benchmark.lua $(DEPTH) > test/references.bib
 	@for ext in $(FORMAT) ; do \
 		$(PANDOC) --defaults test/test.yaml --to $$ext \
 		--output test/expected.$$ext --verbose ; \
 	done
-	@mv test/references.back.bib test/references.bib
+	@mv -f test/references.back.bib test/references.bib
 
 #
 # Quarto test
@@ -216,5 +219,7 @@ setup: update-name
 ## Clean regenerables files
 .PHONY: clean
 clean:
+	rm -rf test/references.back.bib
+	$(PANDOC) lua .tools/benchmark.lua 3 > test/references.bib
 	rm -rf test/input_files
 	rm -f _site/output.md _site/index.html _site/style.css
