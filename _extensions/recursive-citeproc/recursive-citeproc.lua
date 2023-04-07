@@ -130,6 +130,13 @@ function Options:read(meta)
 
 end
 
+--- # Avoid crash with empty bibliography key
+local function fixEmptyBiblio(meta)
+  if meta.bibliography and stringify(meta.bibliography) == '' then
+    meta.bibliography = nil
+    return meta
+  end
+end
 --- # Functions to handle lists of strings
 --- could be an object that extends pandoc.List
 
@@ -254,6 +261,9 @@ local function recursiveCiteproc(doc)
   local options = Options:new(doc.meta)
   local depth = 1
   local newDoc
+
+  -- avoid "File not found" error with empty 'bibliography' 
+  doc.meta = fixEmptyBiblio(doc.meta)
 
   while options.allowDepth(depth) do
     depth = depth + 1
