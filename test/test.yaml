@@ -2,6 +2,8 @@ input-files: ["test/input.md"]
 standalone: true
 bibliography: ${.}/references.bib
 csl: ${.}/chicago-author-date-with-note.csl
+# pinning the template to match across different version of pandoc
+template: ${.}/template
 metadata:
   link-citations: true
 filters:
