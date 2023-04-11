@@ -27,8 +27,10 @@ jobs:
       fail-fast: true
       matrix:
         pandoc:
-          - edge
           - latest
+          # Only testing one version as we're relying on an exact match 
+          # with pandoc's embedded HTML template
+            # - edge
             # This should be the oldest version that's supported
             # - 2.19.2
 
