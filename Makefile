@@ -13,7 +13,7 @@ SED := sed $(shell sed v </dev/null >/dev/null 2>&1 && echo " --posix") -E
 
 # Pandoc formats for test outputs
 ifeq "$(FORMAT)" ""
-FORMAT = html
+FORMAT = native
 endif
 
 # Benchmarking depth

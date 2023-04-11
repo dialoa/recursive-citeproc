@@ -13,9 +13,5 @@ filters:
 - recursive-citeproc
 - quarto
 
-format:
-  html:
-    template: template.html
-
 profile:
   group: ['generate','test']

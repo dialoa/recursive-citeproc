@@ -30,9 +30,7 @@ jobs:
           - edge
           - latest
           # This should be the oldest version that's supported
-          # removed because CSL html output is different,
-          # perhaps better test in native mode?
-          #- 2.19
+          - 2.19
 
     container:
       image: pandoc/core:${{ matrix.pandoc }}

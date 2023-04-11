@@ -3,7 +3,6 @@ standalone: true
 bibliography: test/references.bib
 csl: test/chicago-author-date-with-note.csl
 # pinning the template to match across different version of pandoc
-template: test/template.html
 metadata:
   link-citations: true
 filters:
