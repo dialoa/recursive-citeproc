@@ -4,7 +4,7 @@ bibliographies in Pandoc and Quarto
 @author Julien Dutant <julien.dutant@kcl.ac.uk>
 @copyright 2021-2024 Julien Dutant
 @license MIT - see LICENSE file for details.
-@release 2.0.0
+@release 2.0.1
 ]]
 
 local log = require('log')
