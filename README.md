@@ -3,7 +3,7 @@ Recursive-citeproc
 
 [![GitHub build status][CI badge]][CI workflow]
 
-Self-citing BibTeX bibliographies in [Pandoc][] and [Quarto][].
+[Pandoc][]/[Quarto][] filter for self-citing BibTeX bibliographies.
 
 [CI badge]: https://img.shields.io/github/actions/workflow/status/dialoa/recursive-citeproc/ci.yaml?branch=main
 [CI workflow]: https://github.com/dialoa/recursive-citeproc/actions/workflows/ci.yaml
