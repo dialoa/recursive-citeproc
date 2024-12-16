@@ -32,7 +32,7 @@ jobs:
          # - 2.19.2
 
     container:
-      image: pandoc/core::${{ matrix.pandoc }}
+      image: pandoc/core:${{ matrix.pandoc }}
 
     steps:
       - name: Checkout
