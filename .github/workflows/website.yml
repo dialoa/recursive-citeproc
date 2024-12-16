@@ -26,15 +26,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
-      - name: Prepare custom pandoc/latex container
+      - name: Prepare custom pandoc/core container
         run: |
-          docker build -t custom-pandoc-latex -f .tools/Dockerfile .
+          docker build -t custom-pandoc-core -f .tools/Dockerfile .
       - name: Render Website
         run: |
           make -B website \
             SOURCE_DIR="" \
             PANDOC="docker run --rm --volume $(pwd):/data \
-              --user $(id -u):$(id -g) custom-pandoc-latex"
+              --user $(id -u):$(id -g) custom-pandoc-core"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
