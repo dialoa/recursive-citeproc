@@ -1,23 +1,46 @@
 # Name of the filter file, *with* `.lua` file extension.
-FILTER_FILE := recursive-citeproc.lua
+FILTER_FILE := $(wildcard *.lua)
 # Name of the filter, *without* `.lua` file extension
 FILTER_NAME = $(patsubst %.lua,%,$(FILTER_FILE))
+# Source files
+#	Optional: build the filter file from multiple sources.
+#	*Do not comment out!* To deactivate it's safer to
+#	define an empty SOURCE_MAIN variable with:
+# 	SOURCE_MAIN = 
+SOURCE_DIR = src
 
-# Allow to use different pandoc and quarto binaries, e.g. when testing.
+# 	Find source files	
+SOURCE_FILES := $(wildcard $(SOURCE_DIR)/*.lua)
+SOURCE_MODULES := $(SOURCE_FILES:$(SOURCE_DIR)/%.lua=%)
+SOURCE_MODULES := $(SOURCE_MODULES:main=)
+SOURCE_MAIN = main
+
+# Pandoc example file
+EXAMPLE_DIR := example
+EXPECTED_DIR := expected
+TEST_SRC := $(EXAMPLE_DIR)/input.md
+TEST_DEFAULTS := _pandoc.yml
+TEST_FILES := $(TEST_SRC) $(TEST_DEFAULTS)
+QTEST_DEFAULTS := _quarto.yml _quarto-generate.yml _quarto-test.yml
+QTEST_FILES := $(TEST_SRC) $(QTEST_DEFAULTS)
+
+# Docs
+# Source and defaults for docs version of Pandoc example output
+DOCS_SRC = docs/manual.md
+DOCS_DEFAULTS := $(TEST_DEFAULTS)
+
+# Allow to use a different pandoc binary, e.g. when testing.
 PANDOC ?= pandoc
 QUARTO ?= quarto
 # Allow to adjust the diff command if necessary
-DIFF = diff
+DIFF ?= diff
 # Use a POSIX sed with ERE ('v' is specific to GNU sed)
 SED := sed $(shell sed v </dev/null >/dev/null 2>&1 && echo " --posix") -E
 
 # Pandoc formats for test outputs
-ifeq "$(FORMAT)" ""
-FORMAT = native
-endif
-
-# Benchmarking depth
-DEPTH ?= 100
+# Use make generate FORMAT=pdf to try PDF, 
+# not included in the test as PDF files aren't identical on each run
+FORMAT ?= html
 
 # Directory containing the Quarto extension
 QUARTO_EXT_DIR = _extensions/$(FILTER_NAME)
@@ -44,7 +67,40 @@ USER_NAME = $(shell git config user.name)
 help:
 	@tabs 22 ; $(SED) -ne \
 	'/^## / h ; /^[^_.$$#][^ ]+:/ { G; s/^(.*):.*##(.*)/\1@\2/; P ; h ; }' \
-	$(MAKEFILE_LIST) | tr @ '\t'
+	$(MAKEFILE_LIST) | tr @ '\t' 
+
+#
+# Build
+# 
+# automatically triggered on `test` and `generate`
+
+## Build the filter file from sources (requires luacc)
+# If SOURCE_DIR is not empty, combine source files with
+# luacc and replace the filter file. 
+# ifeq is safer than ifdef (easier for the user to make
+# the variable empty than to make it undefined).
+ifneq ($(SOURCE_DIR), )
+$(FILTER_FILE): _check_luacc $(SOURCE_FILES)
+	@if [ -f $(QUARTO_EXT_DIR)/$(FILTER_FILE) ]; then \
+		luacc -o $(QUARTO_EXT_DIR)/$(FILTER_FILE) -i $(SOURCE_DIR) \
+			$(SOURCE_DIR)/$(SOURCE_MAIN) $(SOURCE_MODULES); \
+		if [ ! -L $(FILTER_FILE) ]; then \
+		    ln -s $(QUARTO_EXT_DIR)/$(FILTER_FILE) $(FILTER_FILE); \
+		fi \
+	else \
+		luacc -o $(FILTER_FILE) -i $(SOURCE_DIR) \
+			$(SOURCE_DIR)/$(SOURCE_MAIN) $(SOURCE_MODULES); \
+	fi
+
+.PHONY: check_luacc
+_check_luacc: 
+	@if ! command -v luacc &> /dev/null ; then \
+		echo "LuaCC is needed to build the filter. Available on LuaRocks:"; \
+		echo " https://luarocks.org/modules/mihacooper/luacc"; \
+		exit; \
+	fi
+
+endif
 
 #
 # Test
@@ -55,10 +111,10 @@ help:
 # (i.e., the filter file).
 # let `test` be a PHONY target so that it is run each time it's called.
 .PHONY: test
-test: $(FILTER_FILE) test/input.md test/test.yaml
+test: $(FILTER_FILE) $(TEST_FILES)
 	@for ext in $(FORMAT) ; do \
-		$(PANDOC) --defaults test/test.yaml --to $$ext | \
-		$(DIFF) test/expected.$$ext - ; \
+		$(PANDOC) --defaults $(TEST_DEFAULTS) --to $$ext | \
+		$(DIFF) expected/expected.$$ext - ; \
 	done
 
 ## Generate the expected output
@@ -66,23 +122,23 @@ test: $(FILTER_FILE) test/input.md test/test.yaml
 # would cause it to be regenerated on each run, making the test
 # pointless.
 .PHONY: generate
-generate: $(FILTER_FILE) test/input.md test/test.yaml
+generate: $(FILTER_FILE) $(TEST_FILES)
 	@for ext in $(FORMAT) ; do \
-		$(PANDOC) --defaults test/test.yaml --to $$ext \
-		--output test/expected.$$ext ; \
+		$(PANDOC) --defaults $(TEST_DEFAULTS) --to $$ext \
+		--output $(EXPECTED_DIR)/expected.$$ext ; \
 	done
 
 # Benchmark
 # used to compare pandoc.utils.references with manual collection
 .PHONY: benchmark
-benchmark: $(FILTER_FILE) test/input.md test/test.yaml
-	@mv -f test/references.bib test/references.back.bib
-	@$(PANDOC) lua .tools/benchmark.lua $(DEPTH) > test/references.bib
+benchmark: $(FILTER_FILE) $(TEST_FILES)
+	@mv -f $(EXAMPLE_DIR)/references.bib $(EXAMPLE_DIR)/references.back.bib
+	@$(PANDOC) lua .tools/benchmark.lua $(DEPTH) > $(EXAMPLE_DIR)/references.bib
 	@for ext in $(FORMAT) ; do \
-		$(PANDOC) --defaults test/test.yaml --to $$ext \
-		--output test/expected.$$ext --verbose ; \
+		$(PANDOC) --defaults $(TEST_DEFAULTS) --to $$ext \
+		--output $(EXPECTED_DIR)/expected.$$ext --verbose ; \
 	done
-	@mv -f test/references.back.bib test/references.bib
+	@mv -f $(EXAMPLE_DIR)/references.back.bib $(EXAMPLE_DIR)/references.bib
 
 #
 # Quarto test
@@ -90,22 +146,20 @@ benchmark: $(FILTER_FILE) test/input.md test/test.yaml
 
 ## Quarto version of test target
 .PHONY: qtest
-qtest: $(FILTER_FILE) test/input.md _quarto.yml _quarto-test.yaml
+qtest: $(FILTER_FILE) $(TEST_SRC) $(QTEST_FILES)
 	@for ext in $(FORMAT) ; do \
 		$(QUARTO) render --profile=test --to $$ext ; \
-		$(DIFF) test/qexpected.$$ext test/qtest.$$ext ; \
-		rm -f test/qtest.$$ext ; \
+		$(DIFF) $(EXPECTED_DIR)/$(EXAMPLE_DIR)/qexpected.$$ext \
+				$(EXPECTED_DIR)/$(EXAMPLE_DIR)/qtest.$$ext ; \
+		rm -f $(EXPECTED_DIR)/$(EXAMPLE_DIR)/qtest.$$ext ; \
 	done
 
 ## Regenerate Quarto expected outputs
 .PHONY: qgenerate
-qgenerate: $(FILTER_FILE) test/input.md _quarto.yml _quarto-generate.yaml
-	@cd test
+qgenerate: $(FILTER_FILE) $(TEST_SRC) $(QTEST_FILES)
 	@for ext in $(FORMAT) ; do \
 		$(QUARTO) render --profile=generate --to $$ext ; \
 	done
-	@cd ..
-
 
 #
 # Website
@@ -115,13 +169,16 @@ qgenerate: $(FILTER_FILE) test/input.md _quarto.yml _quarto-generate.yaml
 .PHONY: website
 website: _site/index.html _site/$(FILTER_FILE)
 
-_site/index.html: README.md test/input.md $(FILTER_FILE) .tools/docs.lua \
+_site/index.html: $(DOCS_SRC) $(TEST_FILES) $(FILTER_FILE) .tools/docs.lua \
 		_site/output.html _site/style.css
 	@mkdir -p _site
+	@cp .tools/anchorlinks.js _site
 	$(PANDOC) \
 	    --standalone \
 	    --lua-filter=.tools/docs.lua \
-	    --metadata=sample-file:test/input.md \
+	    --lua-filter=.tools/anchorlinks.lua \
+		--lua-filter=$(FILTER_FILE) \
+	    --metadata=sample-file:$(TEST_SRC) \
 	    --metadata=result-file:_site/output.html \
 	    --metadata=code-file:$(FILTER_FILE) \
 	    --css=style.css \
@@ -132,13 +189,13 @@ _site/style.css:
 	@mkdir -p _site
 	curl \
 	    --output $@ \
-	    'https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/light.css'
+	    'https://cdn.jsdelivr.net/npm/water.css@2/out/water.min.css'
 
-_site/output.html: $(FILTER_FILE) test/input.md test/test.yaml
+_site/output.html: $(FILTER_FILE) $(TEST_SRC) $(DOCS_DEFAULTS)
 	@mkdir -p _site
 	$(PANDOC) \
-	    --defaults=test/test.yaml \
-	    --to=html \
+	    --defaults=$(DOCS_DEFAULTS) \
+		--to=html \
 	    --output=$@
 
 _site/$(FILTER_FILE): $(FILTER_FILE)
@@ -180,46 +237,20 @@ $(QUARTO_EXT_DIR)/$(FILTER_FILE): $(FILTER_FILE) $(QUARTO_EXT_DIR)
 #
 
 ## Sets a new release (uses VERSION macro if defined)
+## Usage make release VERSION=x.y.z
 .PHONY: release
-release: quarto-extension generate qgenerate clean
+release: quarto-extension generate
 	git commit -am "Release $(FILTER_NAME) $(VERSION)"
 	git tag v$(VERSION) -m "$(FILTER_NAME) $(VERSION)"
 	@echo 'Do not forget to push the tag back to github with `git push --tags`'
 
 #
-# Set up (normally used only once)
-#
-
-## Update filter name
-.PHONY: update-name
-update-name:
-	sed -i'.bak' -e 's/greetings/$(FILTER_NAME)/g' README.md
-	sed -i'.bak' -e 's/greetings/$(FILTER_NAME)/g' test/test.yaml
-	rm README.md.bak test/test.yaml.bak
-
-## Set everything up (must be used only once)
-.PHONY: setup
-setup: update-name
-	git mv greetings.lua $(REPO_NAME).lua
-	@# Crude method to updates the examples and links; removes the
-	@# template instructions from the README.
-	sed -i'.bak' \
-	    -e 's/greetings/$(REPO_NAME)/g' \
-	    -e 's#tarleb/lua-filter-template#$(REPO_PATH)#g' \
-      -e '/^\* \*/,/^\* \*/d' \
-	    README.md
-	sed -i'.bak' -e 's/greetings/$(REPO_NAME)/g' test/test.yaml
-	sed -i'.bak' -e 's/Albert Krewinkel/$(USER_NAME)/' LICENSE
-	rm README.md.bak test/test.yaml.bak LICENSE.bak
-
-#
 # Helpers
 #
 
-## Clean regenerables files
+## Clean regenerable files
 .PHONY: clean
 clean:
-	rm -rf test/references.back.bib
-	$(PANDOC) lua .tools/benchmark.lua 3 > test/references.bib
-	rm -rf test/input_files
-	rm -f _site/output.md _site/index.html _site/style.css
+	rm -rf _site/*
+	rm -rf $(EXPECTED_DIR)/*
+

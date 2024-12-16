@@ -1,5 +1,8 @@
 /_site/
 
+# Quarto artefacts
 /.quarto/
+/expected/input_files
+/expected/example/input_files
 
 /.luarc.json

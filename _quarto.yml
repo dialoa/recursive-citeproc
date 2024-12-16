@@ -1,17 +1,15 @@
 project:
   type: default
+  output-dir: expected
+  render:
+  - example/input.md
 
-output-dir: test
-  
-render:
-- test/input.md
-
-bibliography: references.bib
-csl: chicago-author-date-with-note.csl
+bibliography: example/references.bib
+csl: example/chicago-author-date-with-note.csl
 
 filters:
-- recursive-citeproc
 - quarto
+- recursive-citeproc
 
 profile:
   group: ['generate','test']
