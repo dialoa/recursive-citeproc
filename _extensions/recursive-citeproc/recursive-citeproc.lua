@@ -373,9 +373,12 @@ local function log(type, text)
     local level = {INFO = 0, WARNING = 1, ERROR = 2}
     if level[type] == nil then type = 'ERROR' end
     if level[PANDOC_STATE.verbosity] <= level[type] then
-        io.stderr:write(
-            '[' .. type .. '] '..FILTER_NAME..': '.. text .. '\n'
-        )
+        local message = '[' .. type .. '] '..FILTER_NAME..': '.. text .. '\n'
+        if quarto then
+            quarto.log.output(message)
+        else
+            io.stderr:write(message)
+        end
     end
   end
 
@@ -402,7 +405,7 @@ bibliographies in Pandoc and Quarto
 @author Julien Dutant <julien.dutant@kcl.ac.uk>
 @copyright 2021-2024 Julien Dutant
 @license MIT - see LICENSE file for details.
-@release 1.2.1
+@release 2.0.0
 ]]
 
 local log = require('log')
@@ -414,8 +417,8 @@ local stringify = pandoc.utils.stringify
 
 -- Pandoc 2.17 for relying on `elem:walk()`, `pandoc.Inlines`, pandoc.utils.type
 PANDOC_VERSION:must_be_at_least '2.17'
--- Limit recursion depth
-DEFAULT_MAX_DEPTH = 100
+-- Limit recursion depth; 10 should do and avoid the appearance of freezing
+DEFAULT_MAX_DEPTH = 10
 -- Error messages
 ERROR_MESSAGES = {
   REFS_FOUND = 'I found a Div block with identifier `refs`. This probably means'
@@ -581,7 +584,9 @@ local function recursiveCiteproc(doc)
   doc = runCiteproc(doc)
 
   -- Typeset citations in the bibliography
-  return typesetCitationsInRefs(doc)
+  doc = typesetCitationsInRefs(doc)
+
+  return doc
 
 end
 

@@ -6,9 +6,9 @@ project:
 
 bibliography: example/references.bib
 csl: example/chicago-author-date-with-note.csl
+citeproc: false
 
 filters:
-- quarto
 - recursive-citeproc
 
 profile:
