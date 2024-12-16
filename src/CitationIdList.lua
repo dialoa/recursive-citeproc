@@ -225,37 +225,11 @@ function CitationIdList:insertInNocite(meta)
     return meta
 end
 
---- Use this to run command line tests (with pandoc lua)
-if arg and arg[0] == debug.getinfo(1, "S").source:sub(2) then
+--- Use this to run command line tests with pandoc lua
+-- if arg and arg[0] == debug.getinfo(1, "S").source:sub(2) then
 
-    local SRC =
-[[---
-bibliography: ../test/references.bib
-dummy: |
-    @Doe2020, @Doe2018
----
-Hello.
-]]
-
-    local mymeta = pandoc.Meta{thanks = 
-        pandoc.Cite('nothing',{pandoc.Citation('Smith','AuthorInText')})
-    }
-    local myblocks = pandoc.Para{
-        pandoc.Cite('nothing',{pandoc.Citation('Jones','AuthorInText')})
-    }
-    local mydoc = pandoc.Pandoc(myblocks,mymeta)
-    local mycites = CitationIdList:new({'hello','john'})
-    mycites:addFromReferences(pandoc.read(SRC, 'markdown'))
-    mycites:addFromCitationIds(CitationIdList:new(mydoc).data)
-    local newcites = CitationIdList:new{'john','Doe2020'}
-    test = mycites:minus(newcites)
-
-    for _,item in ipairs(test.data) do
-        print(item)
-    end
-
-else
+-- else
     
     return CitationIdList
 
-end
+-- end
