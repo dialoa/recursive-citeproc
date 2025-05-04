@@ -3,7 +3,8 @@ standalone: true
 # pinning the template to match across different version of pandoc
 metadata:
   link-citations: true
-  bibliography: example/references.bib
+  bibliography: 
+  - example/references.bib
   csl: example/chicago-author-date-with-note.csl
 filters:
   - {type: lua, path: recursive-citeproc.lua}

@@ -266,6 +266,8 @@ local metatype = pandoc.utils.type
 ---@class Options
 ---@field new fun(meta: pandoc.Meta):Options create Options object
 ---@field allowDepth fun(depth: number):boolean depth is allowed
+---@field getDepth fun():number returns max depth (error messages)
+---@field debug boolean debug mode
 local Options = {}
 
 ---create an Options object
@@ -281,52 +283,62 @@ function Options:new(meta)
   return o
 end
 
---- normalize: normalize user options
---- simple string is assumed to be max-depth
---- maxdepth alias of max-depth
+--- normalize: normalize user options. No value check, we just 
+--- handle aliases and return options as a map.
 ---@param meta metaObject
 ---@return pandoc.MetaMap
 function Options:normalize(meta)
-  --- ensure its a map; single value assumed to be max-depth
-  meta = (metatype(meta) == 'table' and meta)
-    or (metatype(meta) == 'string' and
-    pandoc.MetaMap({ ['max-depth'] = meta}))
-    or (metatype(meta) == 'Inlines' and 
-    pandoc.MetaMap({ ['max-depth'] = stringify(meta)}))
+
+  --- look for 'rciteproc' or its aliases
+  local opts = (meta.rciteproc and meta.rciteproc)
+    or (meta['recursive-citeproc'] and meta['recursive-citeproc'])
+    or (meta.recursiveciteproc and meta.recursiveciteproc)
+    or pandoc.MetaMap{}
+
+  --- ensure opts a map; single value assumed to be max-depth
+  opts = (metatype(opts) == 'table' and opts)
+    or ((metatype(opts) == 'Inlines' or metatype(opts) == 'string')
+      and pandoc.MetaMap({ ['max-depth'] = stringify(opts)}))
+    or pandoc.MetaMap{}
 
   --- provide alias(es)
   aliases = { ['max-depth'] = 'maxdepth' }
 
   for key,alias in pairs(aliases) do
-    meta[key] = meta[key] == nil and meta[alias] ~= nil and meta[alias]
-      or meta[key]
+    opts[key] = opts[key] == nil and opts[alias] ~= nil and opts[alias]
+      or opts[key]
   end
 
-  --- 
-
-  return meta
+  return opts
 
 end
 
 ---read: read options from doc's meta
----treat maxdepth as alias for max-depth
 ---@param meta pandoc.Meta
 function Options:read(meta)
-  local opts = meta['recursive-citeproc']
-    and Options:normalize(meta['recursive-citeproc'])
-    or nil
+  local opts = Options:normalize(meta)
 
-  -- allowDepth(depth) must return true when depth = 1
-  local userMaXDepth = opts and tonumber(opts['max-depth'])
-  local maxDepth = userMaXDepth and userMaXDepth >= 0 and userMaXDepth
+  -- Option: max-depth
+
+  local userMaXDepth = opts['max-depth'] and (
+    metatype(opts['max-depth']) == 'Inlines' and tonumber(stringify(opts['max-depth']))
+    or tonumber(opts['max-depth'])
+  )
+  local maxDepth = userMaXDepth and userMaXDepth >=0 and userMaXDepth
     or DEFAULT_MAX_DEPTH
-  self.allowDepth = function (depth)
-    return maxDepth == 0 or maxDepth >= depth
-  end
 
   self.getDepth = function()
     return maxDepth
   end
+
+  -- self.allowDepth returns true when depth = 1
+  self.allowDepth = function (depth)
+    return maxDepth == 0 or maxDepth >= depth
+  end
+
+  -- Option: debug
+
+  self.debug = opts.debug and opts.debug == true or false
 
 end
 
@@ -377,7 +389,7 @@ end
 bibliographies in Pandoc and Quarto
 
 @author Julien Dutant <julien.dutant@kcl.ac.uk>
-@copyright 2021-2024 Julien Dutant
+@copyright 2021-2025 Philosophie.ch
 @license MIT - see LICENSE file for details.
 @release 2.0.2
 ]]
@@ -396,7 +408,7 @@ DEFAULT_MAX_DEPTH = 10
 -- Error messages
 ERROR_MESSAGES = {
   REFS_FOUND = 'I found a Div block with identifier `refs`. This probably means'
-  .." that you are running Citeproc alongside this filter. If you are, don't:"
+  .." that you are running Citeproc alongside this filter. You don't need to:"
   .." this filter replaces Citeproc. If you aren't, you are using `refs` as an"
   .." identifier on some Div element. That is a bad idea, as this interferes"
   .." with Citeproc and this filter. I'm removing that element from the output.",
@@ -405,7 +417,6 @@ ERROR_MESSAGES = {
       ..'Check if there are circular self-citations in your bibligraphy.'
   end
 }
-
 
 --- # Helper functions
 
@@ -423,7 +434,7 @@ local function runCiteproc (doc)
   end
 end
 
----Avoid crash with empty bibliography key
+---Avoid crash with empty but non-nil bibliography key
 ---@param meta pandoc.Meta
 ---@return pandoc.Meta meta
 local function fixEmptyBiblio(meta)
@@ -439,8 +450,8 @@ end
 ---If found, the Div is removed from the blocks.
 ---@param blocks pandoc.Blocks
 ---@param identifier string
----@return pandoc.Blocks blocks blocks with the Div removed if found
----@return pandoc.Div|nil div Div if found, or nil 
+---@return pandoc.Blocks blocks blocks with Div removed if found
+---@return pandoc.Div|nil div Div if found, nil otherwise
 local function extractDivById(blocks, identifier)
   if not identifier or identifier == '' then
     return blocks, nil
@@ -456,7 +467,7 @@ local function extractDivById(blocks, identifier)
   }, result
 end
 
----Generate a bibliography from a document's meta and citation list
+---Make a bibliography from a document's meta and citation list
 ---@param meta pandoc.Meta
 ---@param citationIdList? CitationIdList
 local function makeBibliography(meta, citationIdList)
@@ -475,14 +486,13 @@ end
 ---@return pandoc.Pandoc|nil result updated document or nil
 local function typesetCitationsInRefs(doc)
   local blocks, refs = extractDivById(doc.blocks, 'refs')
-  if not refs then
-    return nil
-  end
 
-  -- Change identifier, otherwise Citeproc adds to this Div
+  if not refs then return nil end
+
+  -- Change identifier, otherwise Citeproc adds entries to this Div
   refs.identifier = 'oldRefs'
 
-  -- run Citeprof on refs and extract result
+  -- run Citeproc on refs and extract result
   local tmpdoc = runCiteproc(pandoc.Pandoc(pandoc.Blocks{refs}, doc.meta))
   local _, newRefs = extractDivById(tmpdoc.blocks, 'oldRefs')
 
@@ -499,26 +509,28 @@ end
 --- # Filter
 
 ---recursiveCiteproc: fill in `nocite` field
----until producing a bibliography adds no new citations
----returns document with expanded no-cite field.
+---until producing a bibliography adds no new citations,
+---then produce a bibliography.
+---@param doc pandoc.Pandoc
+---@return pandoc.Pandoc|nil
 local function recursiveCiteproc(doc)
   local options = Options:new(doc.meta)
-  doc.meta = fixEmptyBiblio(doc.meta) -- avoid crash on empty `bibliography` key
+  -- prevent crash if `doc.meta.bibliography` is an empty string
+  doc.meta = fixEmptyBiblio(doc.meta)
 
-  -- Check if Citeproc has been applied, otherwise run it; extract bibliography.
-  -- Quarto users can't avoid it but warn Pandoc users that it's redundant.
+  -- Get the bibliography; run Citeproc if needed. For Pandoc users, warn that
+  -- using Citeproc is redundant (Quarto users can't avoid it). 
   local refs
   doc.blocks, refs = extractDivById(doc.blocks, 'refs')
-  if refs then
-    if not quarto then 
+  if refs and not quarto then 
       log('WARNING', ERROR_MESSAGES.REFS_FOUND)
-    end
   else
     doc = runCiteproc(doc)
     doc.blocks, refs = extractDivById(doc.blocks, 'refs')
   end
 
-  -- if no bibliography or no citations in the bibliography, quick exit
+  -- quick exit if no recursion needed (bibliography is absent or does not 
+  -- contain citations)
   if not refs then
     return
   elseif CitationIdList:new(refs):isEmpty() then
@@ -537,12 +549,14 @@ local function recursiveCiteproc(doc)
   ---@param depth number
   ---@return CitationIdList
   local function recursion(cites, depth)
+
     if not options.allowDepth(depth) then
       log('WARNING', ERROR_MESSAGES.MAX_DEPTH(options.getDepth()))
       return cites
     end
     local bib = makeBibliography(doc.meta, originalCites:plus(cites))
     newCites = CitationIdList:new(bib):minus(originalCites)
+
     if cites:includes(newCites) then
       return cites
     else

@@ -108,8 +108,8 @@
      overflow: visible;
     }
     hr {
-      background-color: #1a1a1a;
       border: none;
+      border-top: 1px solid #1a1a1a;
       height: 1px;
       margin: 1em 0;
     }
@@ -196,10 +196,20 @@
 </header>
 <p><span class="citation" data-cites="Doe2020">Doe (<a
 href="#ref-Doe2020" role="doc-biblioref">2020</a>)</span> illustrates a
-simple recursion.</p>
-<p><span class="citation" data-cites="Jones2022d">Jones (<a
-href="#ref-Jones2022d" role="doc-biblioref">2022d</a>)</span> checks
-automatic a, b, c, … added to same year citations.</p>
+simple recursion. We also include some of Smith’s work in the
+<code>nocite</code> metadata field to check that this field is
+preserved.</p>
+<p><span class="citation" data-cites="Jones2022b">Jones (<a
+href="#ref-Jones2022b" role="doc-biblioref">2022b</a>)</span> and <span
+class="citation" data-cites="Jones2022e">Jones (<a
+href="#ref-Jones2022e" role="doc-biblioref">2022e</a>)</span> check that
+automatic suffixes a, b, c, … are handled correctly. In the first
+recursion round these citations get suffixes a and b. Ultimately they
+should settle on suffixes b and e as the cross-referred Jones 2022
+entries are added chronologically and their suffixes recalculated.</p>
+<p>In debug mode the bibliography is printed at each stage of recursion.
+Activate it by including <code>debug: true</code> within the filter’s
+metadata options.</p>
 <h1 class="unnumbered" id="references">References</h1>
 <div id="refs" class="references csl-bib-body hanging-indent"
 data-entry-spacing="0" role="list">
@@ -216,23 +226,31 @@ role="doc-biblioref">2018</a>)</span>.
 class="citation" data-cites="Doe2019">Doe (<a href="#ref-Doe2019"
 role="doc-biblioref">2019</a>)</span>.
 </div>
-<div id="ref-Jones2022" class="csl-entry" role="listitem">
-Jones, Jo. 2022a. <em>A Brief Note</em>.
+<div id="ref-Jones2022a" class="csl-entry" role="listitem">
+Jones, Jo. 2022a. <span>“A New Thought (Jan).”</span> <em>Journal of
+Studies</em>, January.
 </div>
 <div id="ref-Jones2022b" class="csl-entry" role="listitem">
-———. 2022b. <em>Postscript to <span class="citation"
-data-cites="Jones2022">Jones (<a href="#ref-Jones2022"
-role="doc-biblioref">2022a</a>)</span></em>.
+———. 2022b. <em>An Separately Cited Book (Feb)</em>.
 </div>
 <div id="ref-Jones2022c" class="csl-entry" role="listitem">
-———. 2022c. <em>Postscript to the Postcript <span class="citation"
-data-cites="Jones2022b">Jones (<a href="#ref-Jones2022b"
-role="doc-biblioref">2022b</a>)</span></em>.
+———. 2022c. <span>“A Brief Note (Mar).”</span> <em>Journal of
+Studies</em>, March. Comment on <span class="citation"
+data-cites="Jones2022a">Jones (<a href="#ref-Jones2022a"
+role="doc-biblioref">2022a</a>)</span> (this should be the January
+entry).
 </div>
 <div id="ref-Jones2022d" class="csl-entry" role="listitem">
-———. 2022d. <em>Postscript to the Squared Postcript <span
-class="citation" data-cites="Jones2022c">Jones (<a
-href="#ref-Jones2022c" role="doc-biblioref">2022c</a>)</span></em>.
+———. 2022d. <span>“An Extended Note (Apr).”</span> <em>Journal of
+Studies</em>, April. Extended version of in <span class="citation"
+data-cites="Jones2022c">Jones (<a href="#ref-Jones2022c"
+role="doc-biblioref">2022b</a>)</span> (this should be the March entry).
+</div>
+<div id="ref-Jones2022e" class="csl-entry" role="listitem">
+———. 2022e. <em>Collected Papers (May)</em>. Includes a reprint of <span
+class="citation" data-cites="Jones2022d">Jones (<a
+href="#ref-Jones2022d" role="doc-biblioref">2022c</a>)</span> (this
+should be the April entry).
 </div>
 <div id="ref-Smith2001" class="csl-entry" role="listitem">
 Smith, Al. 2001. <span>“Thoughts.”</span> <em>Varia</em> 1: 1–15.
