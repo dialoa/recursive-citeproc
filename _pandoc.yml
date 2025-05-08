@@ -1,12 +1,12 @@
 input-files: ["example/input.md"]
 standalone: true
 # pinning the template to match across different version of pandoc
+# avoids CI build errors due to latest vs. edge template changes
+template: example/template_3.6.4.html
 metadata:
   link-citations: true
   bibliography: 
   - example/references.bib
   csl: example/chicago-author-date-with-note.csl
-  # use fixed template to avoid CI failures when `latest` and `edge` differ
-  template: example/template_3.6.4.html
 filters:
   - {type: lua, path: recursive-citeproc.lua}
