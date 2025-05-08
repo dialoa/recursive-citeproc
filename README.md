@@ -18,15 +18,14 @@ Overview
 ------------------------------------------------------------------
 
 [BibTeX's documentation][BibTeX] allows self-citing
-bibliographies, that is bibliography entries citing other
-bibliography entries in note, title or abstract fields. These
-aren't handled properly by [Pandoc][]'s and [Quarto][]'s internal
-bibliography engine, Citeproc. This filter extends Citeproc's
-abilities to cover self-citing bibliographies. 
+bibliographies: entries that cite other entries, e.g. in their
+note, abstract or title fields. Citeproc - [Pandoc][]'s and 
+[Quarto][]'s internal bibliography engine - doesn't handle 
+them. This filter acts as a drop-in replacement for Citeproc
+that handles self-citing bibliographies. 
 
-The filter acts as drop-in replacement for Citeproc. It still runs
-Citeproc in the background: bibliography style files are applied
-as expected.
+The filter still runs Citeproc in the background: CSL bibliography 
+style files are applied as expected.
 
 Background
 ------------------------------------------------------------------
