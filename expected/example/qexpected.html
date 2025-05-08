@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.6.37">
+<meta name="generator" content="quarto-1.6.42">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -50,10 +50,10 @@ div.csl-indent {
 <script src="input_files/libs/quarto-html/tippy.umd.min.js"></script>
 <script src="input_files/libs/quarto-html/anchor.min.js"></script>
 <link href="input_files/libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="input_files/libs/quarto-html/quarto-syntax-highlighting-29e2c20b02301cfff04dc8050bf30c7e.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="input_files/libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="input_files/libs/bootstrap/bootstrap.min.js"></script>
 <link href="input_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="input_files/libs/bootstrap/bootstrap-e19dc0c07aeef78048e587c3f1edba7a.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="input_files/libs/bootstrap/bootstrap-c0367b04c37547644fece4185067e4a7.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 
 
 </head>
@@ -84,16 +84,36 @@ div.csl-indent {
     
   </div>
   
+<div>
+  <div class="abstract">
+    <div class="block-title">Abstract</div>
+    <p>This document illustrates self-citing bibliographies. The abstract is used to check that citations in metadata are printed correctly <span class="citation" data-cites="Smith2005">(<a href="#ref-Smith2005" role="doc-biblioref">Smith 2005</a>)</span>.</p>
+  </div>
+</div>
 
 
 </header>
 
 
+<section id="tests" class="level1">
+<h1>Tests</h1>
+<section id="simple-recursion" class="level2">
+<h2 class="anchored" data-anchor-id="simple-recursion">Simple recursion</h2>
 <p><span class="citation" data-cites="Doe2020">Doe (<a href="#ref-Doe2020" role="doc-biblioref">2020</a>)</span> illustrates a simple recursion.</p>
-<p><span class="citation" data-cites="Jones2022d">Jones (<a href="#ref-Jones2022d" role="doc-biblioref">2022d</a>)</span> checks automatic a, b, c, … added to same year citations.</p>
-<section id="references" class="level1">
-<h1>References</h1>
+</section>
+<section id="citations-in-the-nocite-metadata-fields" class="level2">
+<h2 class="anchored" data-anchor-id="citations-in-the-nocite-metadata-fields">Citations in the <code>nocite</code> metadata fields</h2>
+<p>Two more citations from Smith, namely 2001 and 2003 appear only in the <code>nocite</code> metadata field. This checks that they are preserved in the final document.</p>
+</section>
+<section id="suffixes." class="level2">
+<h2 class="anchored" data-anchor-id="suffixes.">Suffixes.</h2>
+<p><span class="citation" data-cites="Jones2022feb">Jones (<a href="#ref-Jones2022feb" role="doc-biblioref">2022b</a>)</span> and <span class="citation" data-cites="Jones2022may">Jones (<a href="#ref-Jones2022may" role="doc-biblioref">2022e</a>)</span> check that automatic suffixes are handled correctly. In the first recursion round these citations get suffixes a and b. Ultimately they should settle on suffixes b and e as the cross-referred Jones 2022 entries are added chronologically and their suffixes recalculated.</p>
+</section>
+<section id="placement-and-preamble-of-the-bibliography" class="level2">
+<h2 class="anchored" data-anchor-id="placement-and-preamble-of-the-bibliography">Placement and preamble of the bibliography</h2>
+<p>We can place the bibliography at an arbitrary point of the document, and even add a preamble to it. The bibliography should appear below this paragraph and start with a brief user preamble.</p>
 <div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<p>This is the user preamble for the bibliography.</p>
 <div id="ref-Doe2018" class="csl-entry" role="listitem">
 Doe, Jane E. 2018. <em>A Long Journey</em>. 1st ed.
 </div>
@@ -103,17 +123,20 @@ Doe, Jane E. 2018. <em>A Long Journey</em>. 1st ed.
 <div id="ref-Doe2020" class="csl-entry" role="listitem">
 ———. 2020. <em>A Long Journey</em>. 3rd ed. Reprint of&nbsp;<span class="citation" data-cites="Doe2019">Doe (<a href="#ref-Doe2019" role="doc-biblioref">2019</a>)</span>.
 </div>
-<div id="ref-Jones2022" class="csl-entry" role="listitem">
-Jones, Jo. 2022a. <em>A Brief Note</em>.
+<div id="ref-Jones2022jan" class="csl-entry" role="listitem">
+Jones, Jo. 2022a. <span>“A New Thought (Jan).”</span> <em>Journal of Studies</em>, January.
 </div>
-<div id="ref-Jones2022b" class="csl-entry" role="listitem">
-———. 2022b. <em>Postscript to&nbsp;<span class="citation" data-cites="Jones2022">Jones (<a href="#ref-Jones2022" role="doc-biblioref">2022a</a>)</span></em>.
+<div id="ref-Jones2022feb" class="csl-entry" role="listitem">
+———. 2022b. <em>An Separately Cited Book (Feb)</em>.
 </div>
-<div id="ref-Jones2022c" class="csl-entry" role="listitem">
-———. 2022c. <em>Postscript to the Postcript&nbsp;<span class="citation" data-cites="Jones2022b">Jones (<a href="#ref-Jones2022b" role="doc-biblioref">2022b</a>)</span></em>.
+<div id="ref-Jones2022mar" class="csl-entry" role="listitem">
+———. 2022c. <span>“A Brief Note (Mar).”</span> <em>Journal of Studies</em>, March. Comment on&nbsp;<span class="citation" data-cites="Jones2022jan">Jones (<a href="#ref-Jones2022jan" role="doc-biblioref">2022a</a>)</span> (this should be the January entry).
 </div>
-<div id="ref-Jones2022d" class="csl-entry" role="listitem">
-———. 2022d. <em>Postscript to the Squared Postcript&nbsp;<span class="citation" data-cites="Jones2022c">Jones (<a href="#ref-Jones2022c" role="doc-biblioref">2022c</a>)</span></em>.
+<div id="ref-Jones2022apr" class="csl-entry" role="listitem">
+———. 2022d. <span>“An Extended Note (Apr).”</span> <em>Journal of Studies</em>, April. Extended version of in&nbsp;<span class="citation" data-cites="Jones2022mar">Jones (<a href="#ref-Jones2022mar" role="doc-biblioref">2022c</a>)</span> (this should be the March entry).
+</div>
+<div id="ref-Jones2022may" class="csl-entry" role="listitem">
+———. 2022e. <em>Collected Papers (May)</em>. Includes a reprint of&nbsp;<span class="citation" data-cites="Jones2022apr">Jones (<a href="#ref-Jones2022apr" role="doc-biblioref">2022d</a>)</span> (this should be the April entry).
 </div>
 <div id="ref-Smith2001" class="csl-entry" role="listitem">
 Smith, Al. 2001. <span>“Thoughts.”</span> <em>Varia</em> 1: 1–15.
@@ -125,6 +148,11 @@ Smith, Al. 2001. <span>“Thoughts.”</span> <em>Varia</em> 1: 1–15.
 ———. 2005. <span>“Afterthoughts.”</span> <em>Varia</em> 15: 25–33.
 </div>
 </div>
+</section>
+<section id="debug" class="level2">
+<h2 class="anchored" data-anchor-id="debug">Debug</h2>
+<p>Setting the filter’s <code>debug</code> option to <code>true</code> in the metadata shows the bibliography self-citations found at each recursion round, provided Pandoc/Quarto is in verbose output mode.</p>
+</section>
 </section>
 
 </main>

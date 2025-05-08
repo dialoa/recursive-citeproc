@@ -4,39 +4,39 @@ bibliographies in Pandoc and Quarto
 @author Julien Dutant <julien.dutant@kcl.ac.uk>
 @copyright 2021-2025 Philosophie.ch
 @license MIT - see LICENSE file for details.
-@release 2.0.2
+@release 2.1.0
 ]]
 
+-- Pandoc 2.17 for relying on `elem:walk()`, `pandoc.Inlines`, pandoc.utils.type
+PANDOC_VERSION:must_be_at_least '2.17'
+
 local log = require('log')
+local refsdiv = require('refsdiv')
 local Options = require('Options')
 local CitationIdList = require('CitationIdList')
 local stringify = pandoc.utils.stringify
 
 --- # Settings
 
--- Pandoc 2.17 for relying on `elem:walk()`, `pandoc.Inlines`, pandoc.utils.type
-PANDOC_VERSION:must_be_at_least '2.17'
--- Limit recursion depth; 10 should do and avoid the appearance of freezing
-DEFAULT_MAX_DEPTH = 10
+-- Default depth. 10 covers most uses and ends fast if entries are missing.
+local DEFAULT_MAX_DEPTH = 10
 -- Error messages
-ERROR_MESSAGES = {
-  REFS_FOUND = 'I found a Div block with identifier `refs`. This probably means'
-  .." that you are running Citeproc alongside this filter. You don't need to:"
-  .." this filter replaces Citeproc. If you aren't, you are using `refs` as an"
-  .." identifier on some Div element. That is a bad idea, as this interferes"
-  .." with Citeproc and this filter. I'm removing that element from the output.",
+local ERROR_MESSAGES = {
+  REFS_FOUND = "It looks like you are running Citeproc before this filter."
+  .." No need to do that: this filter replaces Citeproc.",
   MAX_DEPTH = function (depth) return 'Reached maximum depth of self-citations '
       ..'('.. tostring(depth) ..').'
-      ..'Check if there are circular self-citations in your bibligraphy.'
-  end
+      ..'Check if there are circular self-citations in your bibligraphy, '
+  end,
+  NOTHING_TO_DO = 'No self-citations found.'
 }
 
 --- # Helper functions
 
----runCiteproc: run citeproc on a document
+---Run citeproc on a document
 ---@param doc pandoc.Pandoc
 ---@return pandoc.Pandoc
-local function runCiteproc (doc)
+local function citeproc(doc)
   if PANDOC_VERSION >= '2.19.1' then
     return pandoc.utils.citeproc(doc)
   else
@@ -59,133 +59,114 @@ local function fixEmptyBiblio(meta)
   end
 end
 
----Extract a Div block with a certain id from blocks.
----If found, the Div is removed from the blocks.
----@param blocks pandoc.Blocks
----@param identifier string
----@return pandoc.Blocks blocks blocks with Div removed if found
----@return pandoc.Div|nil div Div if found, nil otherwise
-local function extractDivById(blocks, identifier)
-  if not identifier or identifier == '' then
-    return blocks, nil
+--- # Filter classes and functions
+
+---Diagnosis of the document's pre-existing state
+---@class Diagnosis
+---@field hasBib boolean whether the document has a pre-existing bibliography
+---@field citesInBib CitationIdList citations in the pre-existing bibliography
+---@field hasCitesInBib boolean whether it has Cite elements in its bibliography
+---@field nothingToDo boolean whether recursive citeproc is needed at all
+---@field biblioCanBeUsed boolean whether the pre-existing biblio can be used in the first pass
+local Diagnosis = {}
+
+---Create a diagnosis
+---@param doc pandoc.Pandoc document to be diagnosed
+function Diagnosis:new(doc)
+
+  local o = {}
+  setmetatable(o,self)
+  self.__index = self
+
+  --is there a previous bibliography (#refs Div with CSL entries)?
+  --if yes, does it contain Cite elements?
+  local entries = refsdiv.getEntries(doc)
+
+  if #entries > 0 then
+    o.hasBib = true
+    o.citesInBib = CitationIdList:new(entries)
+    o.hasCitesInBib = not o.citesInBib:isEmpty()
+  else
+    o.hasBib, o.hasCitesInBib = false, false
+    o.citesInBib = CitationIdList:new()
   end
-  local result = nil
-  return blocks:walk{
-    Div = function(div)
-      if div.identifier and div.identifier == identifier then
-        result = div
-        return {}
-      end
-    end
-  }, result
+
+  --nothing to do if there are bib entries but not Cite elements in them
+  o.nothingToDo = o.hasBib and not o.hasCitesInBib 
+    or false
+
+  return o
 end
 
----Make a bibliography from a document's meta and citation list
----@param meta pandoc.Meta
----@param citationIdList? CitationIdList
-local function makeBibliography(meta, citationIdList)
-  minidoc = pandoc.Pandoc({}, meta)
-  if citationIdList then
-    minidoc.meta = citationIdList:insertInNocite(minidoc.meta)
-  end
-  minidoc = runCiteproc(minidoc)
-  if minidoc.blocks[1] then
-    return minidoc.blocks[1]
-  end
-end
-
----Typeset citations in the `refs` Div of a document
----@param doc pandoc.Pandoc document
----@return pandoc.Pandoc|nil result updated document or nil
-local function typesetCitationsInRefs(doc)
-  local blocks, refs = extractDivById(doc.blocks, 'refs')
-
-  if not refs then return nil end
-
-  -- Change identifier, otherwise Citeproc adds entries to this Div
-  refs.identifier = 'oldRefs'
-
-  -- run Citeproc on refs and extract result
-  local tmpdoc = runCiteproc(pandoc.Pandoc(pandoc.Blocks{refs}, doc.meta))
-  local _, newRefs = extractDivById(tmpdoc.blocks, 'oldRefs')
-
-  -- Restore identifier
-  newRefs.identifier = 'refs'
-
-  -- Recreate doc
-  blocks:insert(newRefs)
-  doc.blocks = blocks
-
-  return doc
-end
-
---- # Filter
-
----recursiveCiteproc: fill in `nocite` field
----until producing a bibliography adds no new citations,
----then produce a bibliography.
+-- # Main filter
+ 
+---Main filter process
 ---@param doc pandoc.Pandoc
 ---@return pandoc.Pandoc|nil
 local function recursiveCiteproc(doc)
-  local options = Options:new(doc.meta)
-  -- prevent crash if `doc.meta.bibliography` is an empty string
-  doc.meta = fixEmptyBiblio(doc.meta)
+  local options = Options:new(doc.meta, DEFAULT_MAX_DEPTH)
+  local diag = Diagnosis:new(doc)
 
-  -- Get the bibliography; run Citeproc if needed. For Pandoc users, warn that
-  -- using Citeproc is redundant (Quarto users can't avoid it). 
-  local refs
-  doc.blocks, refs = extractDivById(doc.blocks, 'refs')
-  if refs and not quarto then 
-      log('WARNING', ERROR_MESSAGES.REFS_FOUND)
-  else
-    doc = runCiteproc(doc)
-    doc.blocks, refs = extractDivById(doc.blocks, 'refs')
+  -- if biblio, warn Pandoc users that it's unnecessary
+  if diag.hasBib and not quarto then 
+    log('WARNING', ERROR_MESSAGES.REFS_FOUND)
+  end
+  -- quick exit if nothing needs to be done
+  if diag.nothingToDo then 
+    log('INFO', ERROR_MESSAGES.NOTHING_TO_DO)
+    return 
   end
 
-  -- quick exit if no recursion needed (bibliography is absent or does not 
-  -- contain citations)
-  if not refs then
-    return
-  elseif CitationIdList:new(refs):isEmpty() then
-    doc.blocks:insert(refs)
-    return doc
+  -- prepare document
+  doc.meta = fixEmptyBiblio(doc.meta) -- fix empty string bug
+  -- NB: for simplicity, we wipe out any pre-existing bibliography
+  doc, _ = refsdiv.extractEntries(doc)
+
+  -- prepare recursion
+  local originalCitations = CitationIdList:new(doc)
+  local originalNoCite = doc.meta.nocite and doc.meta.nocite -- store
+  local newCitations = diag.citesInBib -- we already know we need to add those
+  local depth = 1
+
+  if options.debug then 
+    log('INFO', 'pass 0: ', newCitations:toStr())
   end
 
-  -- Second part: the bibliography contains citations, recursion needed
+  while true do
 
-  -- store citations already present in the original
-  originalCites = CitationIdList:new(doc)
+    -- run Citeproc with the new citations added to the original nocite
+    doc.meta.nocite = originalNoCite 
+    doc.meta = newCitations:insertInNocite(doc.meta)
+    doc = citeproc(doc)
 
-  -- establish extra citations by recursion. 
-  -- Depends on options, doc.meta, originalCites.
-  ---@param cites CitationIdList
-  ---@param depth number
-  ---@return CitationIdList
-  local function recursion(cites, depth)
-
-    if not options.allowDepth(depth) then
-      log('WARNING', ERROR_MESSAGES.MAX_DEPTH(options.getDepth()))
-      return cites
+    -- does the generated bib contain even more citations?
+    -- if not, break; otherwise consider another run.
+    local citationsInBib = CitationIdList:new(refsdiv.getEntries(doc))
+    if options.debug then 
+      log('INFO', 'pass '..tostring(depth)..': '..citationsInBib:toStr())
     end
-    local bib = makeBibliography(doc.meta, originalCites:plus(cites))
-    newCites = CitationIdList:new(bib):minus(originalCites)
 
-    if cites:includes(newCites) then
-      return cites
+    if newCitations:includes(citationsInBib) then
+      break
+    elseif not options.allowDepth(depth + 1) then
+      log('WARNING', "reached maximum recursion depth. I could not process the"
+      .." following citation key(s): "
+      ..citationsInBib:minus(newCitations):toStr())
+      break
     else
-      return recursion(newCites, depth + 1)
+      newCitations = citationsInBib
+      depth = depth + 1
+      doc,_ = refsdiv.extractEntries(doc, nil)
     end
+
   end
-
-  extraCites = recursion(CitationIdList:new(), 1)
-
-  -- Citeproc the doc. Typesets citations *in the body* and adds bibliography.
-  -- Citations in the bibliography aren't typeset yet.
-  doc.meta = extraCites:insertInNocite(doc.meta)
-  doc = runCiteproc(doc)
 
   -- Typeset citations in the bibliography
-  doc = typesetCitationsInRefs(doc)
+  -- TODO: try 'suppress-bibliography'
+  doc = refsdiv.rename(doc, 'recursive-citeproc-stored') -- store
+  doc = citeproc(doc) -- typesets citations but adds a new biblio
+  doc = refsdiv.remove(doc) -- remove the generated biblio 
+  doc = refsdiv.rename(doc, 'refs', 'recursive-citeproc-stored') -- restore
 
   return doc
 

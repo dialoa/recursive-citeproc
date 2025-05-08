@@ -1,3 +1,9 @@
+--[[ Options class
+
+  Parse and hold filter options
+
+  ]] 
+
 local stringify = pandoc.utils.stringify
 local metatype = pandoc.utils.type
 
@@ -8,17 +14,19 @@ local metatype = pandoc.utils.type
 ---@field allowDepth fun(depth: number):boolean depth is allowed
 ---@field getDepth fun():number returns max depth (error messages)
 ---@field debug boolean debug mode
+---@field suppressBiblio boolean suppress-bibliography mode
 local Options = {}
 
 ---create an Options object
 ---@param meta pandoc.Meta
+---@param default_max_depth number
 ---@return object Options
-function Options:new(meta)
+function Options:new(meta, default_max_depth)
   o = {}
   setmetatable(o,self)
   self.__index = self
 
-  o:read(meta)
+  o:read(meta, default_max_depth)
   
   return o
 end
@@ -55,7 +63,8 @@ end
 
 ---read: read options from doc's meta
 ---@param meta pandoc.Meta
-function Options:read(meta)
+---@param default_max_depth number
+function Options:read(meta, default_max_depth)
   local opts = Options:normalize(meta)
 
   -- Option: max-depth
@@ -65,13 +74,13 @@ function Options:read(meta)
     or tonumber(opts['max-depth'])
   )
   local maxDepth = userMaXDepth and userMaXDepth >=0 and userMaXDepth
-    or DEFAULT_MAX_DEPTH
+    or default_max_depth
 
   self.getDepth = function()
     return maxDepth
   end
 
-  -- self.allowDepth returns true when depth = 1
+  -- whether a depth is allowed; returns true when depth = 1
   self.allowDepth = function (depth)
     return maxDepth == 0 or maxDepth >= depth
   end
@@ -79,6 +88,11 @@ function Options:read(meta)
   -- Option: debug
 
   self.debug = opts.debug and opts.debug == true or false
+
+  -- Option: suppress-bibliography
+
+  self.suppressBiblio = meta['suppress-bibliography'] and
+    meta['suppress-bibliography'] == true or false
 
 end
 

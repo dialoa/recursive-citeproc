@@ -1,10 +1,12 @@
 --[[ CitationIdList class
+
     Hold and manipulate lists of citations Ids.
+
 ]] 
 
---- # Helper functions
-
 local type = pandoc.utils.type
+
+--- # Helper functions
 
 ---Concatenate a List of lists
 ---@param list pandoc.List[] list of pandoc.Lists
@@ -20,7 +22,7 @@ end
 ---Flatten a meta value to Inlines
 ---in pandoc < 2.17 we only return a pandoc.List of Inline elements
 ---@param elem pandoc.Inlines|string|number|pandoc.Blocks|pandoc.List
----@return pandoc.Inlines result possibly empty Inlines
+---@return pandoc.Inlines|pandoc.List result possibly empty Inlines
 local function flattenToInlines(elem)
     local elemType = type(elem)
     return elemType == 'Inlines' and elem
@@ -42,17 +44,19 @@ end
 ---@class CitationIdList
 ---@field data CitationId[] list of citation ids
 ---@field new fun(self: CitationIdList, source?:pandoc.Pandoc|pandoc.Meta|pandoc.Blocks|pandoc.Block|CitationId[]):CitationIdList 
+---@field toStr fun(self: CitationIdList):string
 ---@field isEmpty fun(self: CitationIdList): boolean
 ---@field find fun(self: CitationIdList, citationId: CitationId):boolean
 ---@field includes fun(self: CitationIdList, citationIdList: CitationIdList):boolean
 ---@field insert fun(self: CitationIdList, citationId: CitationId):nil
+---@field remove fun(self: CitationIdList, citationId: CitationId):nil
 ---@field clone fun(self: CitationIdList):CitationIdList
 ---@field minus fun(self: CitationIdList, citationIdList: CitationIdList):CitationIdList
 ---@field plus fun(self: CitationIdList, citationIdList: CitationIdList):CitationIdList
 ---@field addFromCitationIds fun(self: CitationIdList, list: CitationId[]):nil
----@field addFromBlocks fun(self: CitationIdList, blocks: pandoc.Blocks):nil
----@field addFromMeta fun(self: CitationIdList, meta: pandoc.Meta):nil
----@field addFromPandoc fun(self: CitationIdList, doc: pandoc.Pandoc):nil
+---@field addFromCite fun(self: CitationIdList, cite: pandoc.Cite):nil
+---@field addFromWalkable fun(self: CitationIdList, container: pandoc.Pandoc|pandoc.Meta|pandoc.Blocks|pandoc.Inlines):nil
+---@field addFromBlock fun(self: CitationIdList, inlines: pandoc.Block):nil
 ---@field addFromReferences fun(self: CitationIdList, doc: pandoc.Pandoc):nil
 ---@field insertInNocite fun(self: CitationIdList, meta: pandoc.Meta):pandoc.Meta
 local CitationIdList = {}
@@ -61,7 +65,7 @@ local CitationIdList = {}
 ---@param source? pandoc.Pandoc|pandoc.Meta|pandoc.Blocks|pandoc.Block|CitationId[]
 ---@return CitationIdList 
 function CitationIdList:new(source)
-    o = {}
+    local o = {}
     setmetatable(o,self)
     self.__index = self
 
@@ -69,18 +73,27 @@ function CitationIdList:new(source)
 
     if source then
         srcType = type(source)
-        if srcType == 'Pandoc' then
-            o:addFromPandoc(source)
-        elseif srcType == 'Meta' then
-            o:addFromMeta(source)
-        elseif srcType == 'Blocks' or srcType == 'Block' then
-            o:addFromBlocks(source)
+        if srcType == 'Pandoc' 
+        or srcType == 'Meta'
+        or srcType == 'Blocks'
+        or srcType == 'Inlines' then
+            o:addFromWalkable(source)
+        elseif srcType == 'Block' then 
+            o:addFromBlock(source)
         elseif srcType == 'table' then
             o:addFromCitationIds(source)
         end
     end
     
     return o
+end
+
+---convert to string
+---@param separator string|nil
+---@return string
+function CitationIdList:toStr(separator)
+    local separator = separator or ', '
+    return table.concat(self.data, separator)
 end
 
 ---Whether the list of citations is empty
@@ -133,9 +146,11 @@ end
 ---@param citationIdList CitationIdList list of citations to remove
 ---@return CitationIdList result new CitationIdList
 function CitationIdList:minus(citationIdList)
-    result = self:clone()
-    for _,id in ipairs(citationIdList) do
-        result:insert(id)
+    result = CitationIdList:new()
+    for _,id in ipairs(self.data) do
+        if not citationIdList:find(id) then
+            result:insert(id)
+        end
     end
     return result
 end
@@ -160,49 +175,52 @@ function CitationIdList:addFromCitationIds(list)
     end
 end
 
----Add citation ids found in blocks
----@param blocks pandoc.Blocks
-function CitationIdList:addFromBlocks(blocks)
-    blocks:walk{
+---Add from a Cite element
+function CitationIdList:addFromCite(cite)
+    for _,citation in ipairs(cite.citations) do
+        self:insert(citation.id)
+    end
+end
+
+---Add citation ids found in walkable container
+---@param container pandoc.Meta|pandoc.Pandoc|pandoc.Blocks
+function CitationIdList:addFromWalkable(container)
+    container:walk{
         Cite = function(cite)
-                for _,citation in ipairs(cite.citations) do
-                    self:insert(citation.id)
-                end
-            end
+            self:addFromCite(cite)
+        end
     }
 end
 
----Add citation ids found in selected metadata fields
----namely `title`, `subtitle`, `nocite`, `abstract`, and `thanks`
----@param meta pandoc.Meta
-function CitationIdList:addFromMeta(meta)
-    local keys = {'title', 'subtitle', 'nocite', 'abstract', 'thanks'}
-    for _,key in ipairs(keys) do
-        if meta[key] then
-            self:addFromBlocks(pandoc.Plain(
-                flattenToInlines(meta[key])
-            ))
-        end
+---Add citation ids found in block
+---@param block pandoc.Block
+function CitationIdList:addFromBlock(block)
+    if block.content then 
+        block.content:walk{
+            Cite = function(cite)
+                self:addFromCite(cite)
+            end
+        }
     end
 end
 
 ---Add citation Ids from a Pandoc document
 ---@param doc pandoc.Pandoc
 function CitationIdList:addFromPandoc(doc)
-    if doc.meta then
-        self:addFromMeta(doc.meta)
-    end
-    self:addFromBlocks(doc.blocks)
+    doc:walk{
+        Cite = function(cite)
+            self:addFromCite(cite)
+        end
+    }
 end
 
 ---Add citation Ids from a Pandoc document using pandoc.utils.references
 ---Differences between addFromReferences and addFromPandoc:
----addFromReferences only adds citations present in the bibliography
----addFromPandoc adds citations from any cite element
----addFromReferences adds citations present in any metadata field
----addFromPandoc only adds citations in selected metadata fields
+---addFromReferences only adds citations present in the bibliography database
+---addFromPandoc adds any citations
+---both list citations in a pre-existing* Citeproc bib, if present
 function CitationIdList:addFromReferences(doc)
-    for _,item in pairs(pandoc.utils.references(doc)) do
+    for _,item in ipairs(pandoc.utils.references(doc)) do
         self:insert(item.id)
     end
 end
@@ -211,7 +229,8 @@ end
 ---@param meta pandoc.Meta metadata block to modify
 ---@return pandoc.Meta 
 function CitationIdList:insertInNocite(meta)
-    local inlines = flattenToInlines(meta.nocite)
+    local inlines = meta.nocite and flattenToInlines(meta.nocite)
+        or pandoc.Inlines{}
     for _,id in ipairs(self.data) do
         inlines:insert(pandoc.Space())
         inlines:insert(pandoc.Cite(
