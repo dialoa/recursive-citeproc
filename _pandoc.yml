@@ -6,5 +6,7 @@ metadata:
   bibliography: 
   - example/references.bib
   csl: example/chicago-author-date-with-note.csl
+  # use fixed template to avoid CI failures when `latest` and `edge` differ
+  template: example/template_3.6.4.html
 filters:
   - {type: lua, path: recursive-citeproc.lua}
