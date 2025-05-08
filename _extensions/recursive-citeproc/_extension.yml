@@ -1,6 +1,6 @@
 name: recursive-citeproc
 author: Julien Dutant
-version: 2.0.2
+version: 2.1.0
 contributes:
   filters:
     - recursive-citeproc.lua
